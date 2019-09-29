@@ -3,7 +3,10 @@
     "baseUrl": "src",
     "module": "esnext",
     "target": "es5",
-    "lib": ["esnext", "dom"],
+    "lib": [
+      "esnext",
+      "dom"
+    ],
     "allowJs": false,
     "skipLibCheck": true,
     "esModuleInterop": true,
@@ -18,10 +21,7 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
-    "jsx": "react",
-    "paths": {
-      "@/*": ["*"]
-    }
+    "jsx": "react"
   },
   "include": [
     "src/**/**/*",
