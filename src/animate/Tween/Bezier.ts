@@ -1,6 +1,7 @@
 import BezierJs from 'bezier-js';
 import requestAnimationFrame from 'raf';
-const _RAD2DEG = 180 / Math.PI;
+import { getAngle } from './utils';
+
 export interface IBezierOptions {
   group: IOptionItem[],
   reverseable?: boolean;
@@ -51,14 +52,7 @@ export class Bezier {
       }
 
       return {
-        bezier: new BezierJs(
-          bezier.points.map(item => {
-            return {
-              x: item.x,
-              y: item.y
-            }
-          })
-        ),
+        bezier: new BezierJs(bezier.points),
         duration: bezier.duration * 1000
       }
     });
@@ -182,10 +176,3 @@ export class Bezier {
   }
 
 }
-
-function getAngle(x1: number, y1: number, x2: number, y2: number) {
-
-  return Math.atan2(y2 - y1, x2 - x1) * _RAD2DEG;
-
-}
-

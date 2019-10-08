@@ -1,9 +1,10 @@
 import React, { CSSProperties } from 'react';
 // import { Tween } from './Tween/Tween';
-import { Bezier } from './Tween/Bezier';
-const tween = new Bezier({
+import { Tween } from './Tween/Tween';
+const tween = new Tween({
   reverseable: true,
   infinite: true,
+  type: 'easeInOutBounce',
   group: [
     {
       points: [
@@ -19,23 +20,10 @@ const tween = new Bezier({
           x: 600,
           y: -200,
         },
-      ],
-      duration: 5
-    },
-    {
-      points: [
         {
-          x: 600,
-          y: -200,
+          x: 700,
+          y: 200,
         },
-        {
-          x: 800,
-          y: 0,
-        },
-        {
-          x: 1000,
-          y: -200,
-        }
       ],
       duration: 5
     }

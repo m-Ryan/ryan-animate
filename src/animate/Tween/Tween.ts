@@ -1,180 +1,197 @@
 import { tweenFunctions } from './tween-functions';
-import Bezier from 'bezier-js';
+
 import requestAnimationFrame from 'raf';
-const getTime = Date.now || (() => new Date().getTime());
-// tweenFunction.tweenName(currentTime, beginValue, endValue, totalDuration)
+import { getAngle } from './utils';
+
 export interface ITweenOptions {
-  styles: ITweenStyle[],
-  duration: number;
+  group: ITweenOption[],
+  reverseable?: boolean;
+  infinite?: boolean;
   type?: TweenType;
 }
 
-type ITweenStyle = {
-  x?: number;
-  y?: number;
-  opacity?: number;
-  rotate?: number;
-  width?: number;
-  height?: number;
-  per: number; // 0-1
+type TweenType = keyof typeof tweenFunctions;
+
+type ITweenOption = {
+  points: {
+    x: number;
+    y: number;
+  }[],
+  duration: number
 }
 
-export type TweenType = 'bezier' | keyof typeof tweenFunctions;
+type ITweenItem = {
+  start: {
+    x: number,
+    y: number
+  },
+  end: {
+    x: number,
+    y: number
+  },
+  duration: number;
+}
 
-export type ITweenEventType = 'onChange' | 'onUpdate';
+type outPoint = { x: number, y: number, rotate: number }
+
+export type ITweenEventType = 'onChange' | 'onEnd';
 
 interface IStatusChangeHandler {
-  'onChange'?: (style: Omit<ITweenStyle, 'per'>) => any;
-  'onUpdate'?: (style: Omit<ITweenStyle, 'per'>) => any;
-  'onEnd'?: (style: Omit<ITweenStyle, 'per'>) => any;
-}
-
-const defaultStyle = {
-  x: 0,
-  y: 0,
-  opacity: 1,
-  per: 0,
-  rotate: 0
+  'onChange'?: (style: outPoint) => any;
+  'onEnd'?: (style: outPoint) => any;
 }
 
 export class Tween {
-  totalTime = 0; // 总时间
-  styleCurrentTime = 0; // 每一个style的当前时间 
-  toNextTime = 0; // nextStyle - prevStyle 的时间
-  nextStyleId = -1; // nextStyle - prevStyle 的时间
-  currentTime = 0;
-  startTime = 0;
-  perFrame = Math.round(1000 / 60);
-  styles: ITweenStyle[] = [];
-  prevStyle: ITweenStyle = defaultStyle;
-  nextStyle: ITweenStyle = defaultStyle;
-  intervalTimer: number = 0;
-  easeType: TweenType = 'easeInBounce';
-  Bezier: Bezier;
+  private currentTime = 0;
+  private reverseable = false;
+  private infinite = false;
+  private paused = true;
+  private perFrame = Math.round(1000 / 60);
+  private bezierId: number = 0;
+  private easeType: TweenType = 'easeInOutBack';
+  private intervalTimer: number = 0;
+  private currentTween: ITweenItem | null;
   private handler: IStatusChangeHandler = {};
+  private tweenGroup: ITweenItem[] = [];
+  private frameDataList: outPoint[] = []
 
   constructor(options: ITweenOptions) {
+    this.reverseable = !!options.reverseable;
+    this.infinite = !!options.infinite;
 
-    options.type && (this.easeType = options.type);
-    this.styles = options.styles;
-    this.totalTime = options.duration * 1000;
-
-    if (options.styles.length === 0) {
-      throw new Error('styles不能为空');
+    if (options.type) {
+      this.easeType = options.type;
     }
 
-    if (options.type === 'bezier') {
-      if (this.styles.length <= 1) {
-        throw new Error('bezier 至少需要两个参数');
+    options.group.forEach((item=> {
+      const duration = item.duration / (item.points.length - 1) * 1000;
+      if (item.points.length < 2) {
+        throw new Error('tween.points 至少要2个')
       }
-    }
 
-    this.Bezier = new Bezier(
-      options.styles.map((item=> ({
-        x: item.x!,
-        y: item.y! 
-      })))
-    )
-
-    this.goNextStyle();
+      let length = item.points.length;
+      let index = 0
+      while(index <= length -2) {
+        let points = item.points.slice(index, index+2);
+        this.tweenGroup.push({
+          start: {
+            x: points[0].x,
+            y: points[0].y,
+          },
+          end: {
+            x: points[1].x,
+            y: points[1].y,
+          },
+          duration
+        });
+        index++;
+      }
+    }))
+    this.currentTween = this.getNextTweenItem();
   }
 
   public run() {
-    this.startTime = getTime();
-    this.raf();
+    this.paused = false;
+    this.play();
   }
 
-  getFrame(): Omit<ITweenStyle, 'per'> {
-    const t = (this.currentTime / this.totalTime);
-    const frameTime = t > 1 ? 1 : t;
-    let x = this.getComputedKeyStyle('x');
-    let y = this.getComputedKeyStyle('y');
-    let rotate = 0;
-    if (this.easeType === 'bezier') {
-      const step = this.Bezier.get(frameTime);
-      // console.log(step)
-      x = step.x;
-      y = step.y;
-      rotate = getAngle(0, 0, x, y);
-      if (!rotate) {
-        rotate = 0;
-      }
+  getNextTweenItem() {
+    this.currentTime = 0;
+    this.bezierId += 1;
+    if (this.bezierId <= this.tweenGroup.length) {
+      return this.tweenGroup[this.bezierId - 1]
     }
-    
-    let opacity = this.getComputedKeyStyle('opacity');
-    let width = this.getComputedKeyStyle('width');
-    let height = this.getComputedKeyStyle('height');
+    return null;
+  }
+
+  getFrame(t: number, currentTween: ITweenItem, type: TweenType, ): outPoint {
     return {
-      x,
-      y,
-      opacity,
-      width,
-      rotate,
-      height
+      x: tweenFunctions[type](t, currentTween.start.x, currentTween.end.x, currentTween.duration, 0),
+      y: tweenFunctions[type](t, currentTween.start.y, currentTween.end.y, currentTween.duration, 0),
+      rotate: getAngle(currentTween.start.x,currentTween.start.y, currentTween.end.x, currentTween.end.y) || 0
     }
   }
-  
 
-  getComputedKeyStyle(key: keyof Partial<ITweenStyle>) {
-    const preKey = this.prevStyle[key];
-    const nextKey = this.nextStyle[key];
-    return tweenFunctions.easeInQuad(this.styleCurrentTime, preKey || 0, nextKey|| 0, this.toNextTime);
-  }
-
-  goNextStyle() {
-    this.styleCurrentTime = 0;
-    this.nextStyleId +=1;
-    this.prevStyle = this.styles[this.nextStyleId - 1] || this.prevStyle;
-    this.nextStyle = this.styles[this.nextStyleId];
-    this.toNextTime = this.totalTime * (this.nextStyle.per - this.prevStyle.per);
-  }
-
-  raf() {
+  play() {
     const handler = () => {
-      this.currentTime = getTime() - this.startTime;
-      if (this.styleCurrentTime > this.toNextTime) {
-        if (this.nextStyleId === this.styles.length - 1) {
+      if (this.paused) {
+        return;
+      }
+
+      if (!this.currentTween) {
+        return;
+      }
+
+      const temp = (this.currentTime / this.currentTween.duration);
+      this.currentTime += this.perFrame;
+      const data = this.getFrame(this.currentTime, this.currentTween, this.easeType);
+      this.frameDataList.push(data);
+      const onChangeHandle = this.handler['onChange'];
+      onChangeHandle && onChangeHandle(data);
+      this.intervalTimer = requestAnimationFrame(handler);
+      if (temp > 1) {
+        this.currentTween = this.getNextTweenItem();
+        if (!this.currentTween) {
           this.destroy();
-          const onEndHandle = this.handler['onEnd'];
-          onEndHandle && onEndHandle(this.getFrame());
-          return;
-        } else {
-          this.goNextStyle();
+
+          if (this.reverseable) {
+            this.reserve();
+          } else {
+            if (this.infinite) {
+              this.replay();
+              return;
+            }
+            const onEndHandle = this.handler['onEnd'];
+            onEndHandle && onEndHandle(data);
+          }
+          
         }
       }
-      this.styleCurrentTime += this.perFrame;
-      const onChangeHandle = this.handler['onChange'];
-      onChangeHandle && onChangeHandle(this.getFrame());
-      this.intervalTimer = requestAnimationFrame(handler);
     }
     handler()
   }
 
+  reserve() {
+    const handler = () => {
+    const frameData = this.frameDataList.pop();
+    const onChangeHandle = this.handler['onChange'];
+    onChangeHandle && onChangeHandle(frameData!);
+    this.intervalTimer = requestAnimationFrame(handler);
+     if (!this.frameDataList.length) {
+      this.destroy();
 
-  // raf() {
-  //   const rafTimer = new Raf(() => {
-  //     this.currentTime += this.perFrame;
-  //     this.styleCurrentTime += this.perFrame;
-  //     if (this.styleCurrentTime >= this.toNextTime) {
-  //       if (this.nextStyleId === this.styles.length - 1) {
-  //         rafTimer.cancel();
-  //         const onEndHandle = this.handler['onEnd'];
-  //         onEndHandle && onEndHandle(this.getFrame());
-  //         return;
-  //       } else {
-  //         this.goNextStyle();
-  //       }
-  //     }
+      if (this.infinite) {
+        this.replay();
+        return;
+      }
 
-  //     const onChangeHandle = this.handler['onChange'];
-  //     onChangeHandle && onChangeHandle(this.getFrame());
+      const onEndHandle = this.handler['onEnd'];
+      onEndHandle && onEndHandle(frameData!);
+     }
+    }
+    handler()
+  }
+  
+  replay() {
+    this.reset();
+    this.run();
+  }
 
-  //   }, this.perFrame);
-  // }
+  reset() {
+    this.stop();
+    this.destroy();
+    this.currentTime = 0;
+    this.bezierId = 0;
+    this.currentTween = this.getNextTweenItem();
+  }
 
+
+  stop() {
+    this.paused = true;
+  }
 
   destroy() {
-    this.intervalTimer && clearInterval(this.intervalTimer);
+    requestAnimationFrame.cancel(this.intervalTimer);
   }
 
   public on<T extends ITweenEventType>(event: T, fn: IStatusChangeHandler[ITweenEventType]) {
@@ -185,40 +202,4 @@ export class Tween {
     delete this.handler[event];
   }
 
-}
-
-function getAngle(cx: number,cy: number,x2: number,y2: number){//获得人物中心和鼠标坐标连线，与y轴正半轴之间的夹角
-  var x = Math.abs(cx - x2);
-  var y = Math.abs(cy - y2);
-  var tan = x / y;
-  var radina = Math.atan(tan);//用反三角函数求弧度
-  var angle = Math.floor(180 / (Math.PI / radina)) || 0;//将弧度转换成角度
-  if (x2 > cx && y2 > cy) {// point在第四象限
-      angle = (-1) * angle;
-  }
-  if (x2 === cx && y2 > cy) {// point在y轴负方向上
-      angle = 0;
-  }
-  if (x2 < cx && y2 > cy) {//point在第三象限
-      
-  }
-  if (x2 < cx && y2 === cy) {//point在x轴负方向
-      angle = 90;
-  }
-  if (x2 < cx && y2 < cy) {// point在第二象限
-
-      angle = 180 - angle;
-  }
-  if (x2 === cx && y2 < cy) {//point在y轴正方向上
-      angle = 180;
-  }
-  if (x2 > cx && y2 < cy) {//point在第一象限               
-      angle = 180 + angle;
-  }
-
-  if (x2 > cx && y2 === cy) {//point在x轴正方向上
-      angle = -90;
-  }
-
-  return angle;
 }
