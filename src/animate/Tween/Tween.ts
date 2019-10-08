@@ -96,13 +96,11 @@ export class Tween {
       x = step.x;
       y = step.y;
       rotate = getAngle(0, 0, x, y);
-      console.log(rotate)
       if (!rotate) {
         rotate = 0;
       }
     }
     
-
     let opacity = this.getComputedKeyStyle('opacity');
     let width = this.getComputedKeyStyle('width');
     let height = this.getComputedKeyStyle('height');
@@ -115,6 +113,7 @@ export class Tween {
       height
     }
   }
+  
 
   getComputedKeyStyle(key: keyof Partial<ITweenStyle>) {
     const preKey = this.prevStyle[key];

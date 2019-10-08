@@ -1,44 +1,57 @@
 import React, { CSSProperties } from 'react';
-import { Tween } from './Tween/Tween';
-interface IState {style: CSSProperties}
-export class Animate extends React.Component<any, IState> {
-  state:IState = {
-    style: {}
-  }
-  componentDidMount() {
-    const tween = new Tween({
-      duration: 2,
-      type: 'bezier',
-      styles: [
-        {
-          x: 0,
-          y: 0,
-          rotate: 0,
-          per: 0
-        },
-        {
-          x: 100,
-          y: 100,
-          per: 0.25
-        },
+// import { Tween } from './Tween/Tween';
+import { Bezier } from './Tween/Bezier';
+const tween = new Bezier({
+  reverseable: true,
+  infinite: true,
+  group: [
+    {
+      points: [
         {
           x: 200,
-          y: 0,
-          per:0.5
+          y: -200
         },
         {
-          x: 100,
-          y: -100,
-          per: 0.75
+          x: 400,
+          y: 0,
         },
         {
-          x: 0,
-          y: 0,
-          per: 1
+          x: 600,
+          y: -200,
         },
-      ]
-    });
+      ],
+      duration: 5
+    },
+    {
+      points: [
+        {
+          x: 600,
+          y: -200,
+        },
+        {
+          x: 800,
+          y: 0,
+        },
+        {
+          x: 1000,
+          y: -200,
+        }
+      ],
+      duration: 5
+    }
+  ]
+});
+
+interface IState {style: CSSProperties, isPlay: boolean}
+export class Animate extends React.Component<any, IState> {
+  state:IState = {
+    style: {},
+    isPlay: false
+  }
+
+  componentDidMount() {
     tween.on('onChange', (style)=> {
+      // console.log('style', style)
       this.setState({
         style: {
           transform: `translate(${style.x}px, ${style.y}px) rotate(${style.rotate}deg)`,
@@ -48,14 +61,38 @@ export class Animate extends React.Component<any, IState> {
         }
       })
     })
-    tween.run()
+    this.playAnimate();
+   }
+
+   playAnimate = ()=> {
+     if (!this.state.isPlay) {
+       this.setState({
+         isPlay: !this.state.isPlay
+       }, ()=> {
+         console.log('run')
+        tween.run()
+       })
+      
+     } else {
+      this.setState({
+        isPlay: !this.state.isPlay
+      }, ()=> {
+        tween.stop()
+      })
+     }
    }
 
   render() {
     return (
-     <div style={{height: '100vh', width: '100vw', background: '#fff',padding: 300 }}>
+     <div style={{height: '100vh', width: '100vw', background: '#fff',padding: 400 }} onClick={this.playAnimate}>
         <div style={this.state.style}>
-          <div style={{width: 40, height: 40, background: '#f60'}}>艾哈</div>
+          <div style={{
+            // backgroundImage: `url(http://assets.maocanhua.cn/FuiCg21TBgG6uSh0gNBmdUYUE_en)`,
+            backgroundColor: 'yellow',
+            backgroundSize: '100% 100%',
+            width: 20,
+            height: 20
+          }}>555</div>
         </div>
      </div>
     );
