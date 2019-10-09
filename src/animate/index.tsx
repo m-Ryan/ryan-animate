@@ -1,31 +1,36 @@
 import React, { CSSProperties } from 'react';
 // import { Tween } from './Tween/Tween';
-import { Tween } from './Tween/Tween';
-const tween = new Tween({
-  reverseable: true,
-  infinite: true,
-  type: 'easeInOutBounce',
+// import { Tween } from './Tween/Tween';
+import { Bezier } from './Tween/Bezier';
+const tween = new Bezier({
+  // reverseable: true,
+  // infinite: true,
+  // autoRotate: true,
   group: [
     {
       points: [
         {
-          x: 200,
-          y: -200
+          x: 10,
+          y: 62,
+          rotate: 0,
+          per: 0
+        },
+       
+        {
+          x: 250,
+          y: 100,
+          rotate: 90,
+          per: 0.8
         },
         {
-          x: 400,
-          y: 0,
+          x: 412,
+          y: 295,
+          rotate: 180,
+         per: 1
         },
-        {
-          x: 600,
-          y: -200,
-        },
-        {
-          x: 700,
-          y: 200,
-        },
+       
       ],
-      duration: 5
+      duration: 10
     }
   ]
 });
@@ -39,11 +44,12 @@ export class Animate extends React.Component<any, IState> {
 
   componentDidMount() {
     tween.on('onChange', (style)=> {
-      // console.log('style', style)
+      console.log('style', style)
       this.setState({
         style: {
           transform: `translate(${style.x}px, ${style.y}px) rotate(${style.rotate}deg)`,
           display: 'inline-block',
+          // opacity: style.opacity,
           transformOrigin: 'center'
           // transition: 'all',
         }
@@ -78,7 +84,6 @@ export class Animate extends React.Component<any, IState> {
             // backgroundImage: `url(http://assets.maocanhua.cn/FuiCg21TBgG6uSh0gNBmdUYUE_en)`,
             backgroundColor: 'yellow',
             backgroundSize: '100% 100%',
-            width: 20,
             height: 20
           }}>555</div>
         </div>

@@ -2,49 +2,32 @@ import { tweenFunctions } from './tween-functions';
 
 import requestAnimationFrame from 'raf';
 import { getAngle } from './utils';
+import { IStyle, IAnimateOptions } from 'animate/Tween/type';
 
-export interface ITweenOptions {
-  group: ITweenOption[],
-  reverseable?: boolean;
-  infinite?: boolean;
+export interface ITweenOptions extends IAnimateOptions {
   type?: TweenType;
 }
 
 type TweenType = keyof typeof tweenFunctions;
 
-type ITweenOption = {
-  points: {
-    x: number;
-    y: number;
-  }[],
-  duration: number
-}
-
 type ITweenItem = {
-  start: {
-    x: number,
-    y: number
-  },
-  end: {
-    x: number,
-    y: number
-  },
+  start: IStyle,
+  end: IStyle,
   duration: number;
 }
-
-type outPoint = { x: number, y: number, rotate: number }
 
 export type ITweenEventType = 'onChange' | 'onEnd';
 
 interface IStatusChangeHandler {
-  'onChange'?: (style: outPoint) => any;
-  'onEnd'?: (style: outPoint) => any;
+  'onChange'?: (style: IStyle) => any;
+  'onEnd'?: (style: IStyle) => any;
 }
 
 export class Tween {
   private currentTime = 0;
   private reverseable = false;
   private infinite = false;
+  private autoRotate = false;
   private paused = true;
   private perFrame = Math.round(1000 / 60);
   private bezierId: number = 0;
@@ -53,11 +36,12 @@ export class Tween {
   private currentTween: ITweenItem | null;
   private handler: IStatusChangeHandler = {};
   private tweenGroup: ITweenItem[] = [];
-  private frameDataList: outPoint[] = []
+  private frameDataList: IStyle[] = []
 
   constructor(options: ITweenOptions) {
     this.reverseable = !!options.reverseable;
     this.infinite = !!options.infinite;
+    this.autoRotate = !!options.autoRotate;
 
     if (options.type) {
       this.easeType = options.type;
@@ -74,14 +58,8 @@ export class Tween {
       while(index <= length -2) {
         let points = item.points.slice(index, index+2);
         this.tweenGroup.push({
-          start: {
-            x: points[0].x,
-            y: points[0].y,
-          },
-          end: {
-            x: points[1].x,
-            y: points[1].y,
-          },
+          start: points[0],
+          end: points[1],
           duration
         });
         index++;
@@ -104,12 +82,22 @@ export class Tween {
     return null;
   }
 
-  getFrame(t: number, currentTween: ITweenItem, type: TweenType, ): outPoint {
-    return {
-      x: tweenFunctions[type](t, currentTween.start.x, currentTween.end.x, currentTween.duration, 0),
-      y: tweenFunctions[type](t, currentTween.start.y, currentTween.end.y, currentTween.duration, 0),
-      rotate: getAngle(currentTween.start.x,currentTween.start.y, currentTween.end.x, currentTween.end.y) || 0
+  getFrame(t: number, currentTween: ITweenItem, type: TweenType, ): IStyle {
+    const start = currentTween.start;
+    const end = currentTween.end;
+    const duration = currentTween.duration;
+    let frameData: IStyle = {}
+
+    for(let property in start) {
+      if (start[property] !== undefined && end[property] !== undefined) {
+        frameData[property]= tweenFunctions[type](t, start[property], end[property], duration, 0);
+      }
     }
+
+    if (this.autoRotate && (start.x !== undefined) && (end.x !== undefined) && (start.y !== undefined) && (end.y !== undefined)) {
+      frameData.rotate = getAngle(start.x,start.y, end.x, end.y) || 0
+    }
+    return frameData;
   }
 
   play() {

@@ -1,39 +1,30 @@
 import BezierJs from 'bezier-js';
 import requestAnimationFrame from 'raf';
-import { getAngle } from './utils';
+import { StylePropertys, IStyle, IAnimateOptions } from './type';
+// import { getAngle } from './utils';
 
-export interface IBezierOptions {
-  group: IOptionItem[],
-  reverseable?: boolean;
-  infinite?: boolean;
-}
-
-type IOptionItem = {
-  points: {
-    x: number;
-    y: number;
-  }[],
-  duration: number
-}
+export interface IBezierOptions extends IAnimateOptions {}
 
 type IBezierItem = {
-  bezier: BezierJs,
+  bezier: {
+    [key in StylePropertys]?: BezierJs
+  },
   duration: number
 }
 
-type outPoint = { x: number, y: number, rotate: number }
 
 export type IBezierEventType = 'onChange' | 'onEnd';
 
 interface IStatusChangeHandler {
-  'onChange'?: (style: outPoint) => any;
-  'onEnd'?: (style: outPoint) => any;
+  'onChange'?: (style: IStyle) => any;
+  'onEnd'?: (style: IStyle) => any;
 }
 
 export class Bezier {
   private currentTime = 0;
   private reverseable = false;
   private infinite = false;
+  private autoRotate = false;
   private paused = true;
   private perFrame = Math.round(1000 / 60);
   private bezierId: number = 0;
@@ -41,19 +32,40 @@ export class Bezier {
   private currentBezier: IBezierItem | null;
   private handler: IStatusChangeHandler = {};
   private bezierGroup: IBezierItem[];
-  private frameDataList: outPoint[] = []
+  private frameDataList: IStyle[] = []
 
   constructor(options: IBezierOptions) {
     this.reverseable = !!options.reverseable;
     this.infinite = !!options.infinite;
-    this.bezierGroup = options.group.map(bezier => {
-      if (bezier.points.length < 3) {
+    this.autoRotate = !!options.autoRotate;
+    this.bezierGroup = options.group.map(bezierItem => {
+      if (bezierItem.points.length < 3) {
         throw new Error('bezier.points 至少要三个')
       }
 
+      let bezier: IBezierItem['bezier'] = {}
+      for(let property in bezierItem.points[0]) {
+        bezier[property] = new BezierJs(bezierItem.points.map(item=> ({
+          x: item.per as number,
+          y: item[property] as number
+        })))
+      }
+
+      if (this.autoRotate) {
+        bezier['rotate'] = new BezierJs(bezierItem.points.map(item=> {
+          if (item.x === undefined || item.y === undefined) {
+            throw new Error('autoRotate下，每个point都要提供x，y');
+          }
+          return {
+            x: item.x,
+            y: item.y
+          }
+        }))
+      }
+
       return {
-        bezier: new BezierJs(bezier.points),
-        duration: bezier.duration * 1000
+        bezier: bezier,
+        duration: bezierItem.duration * 1000
       }
     });
 
@@ -74,14 +86,12 @@ export class Bezier {
     return null;
   }
 
-  getFrame(bezier: BezierJs, t: number): outPoint {
-    const step = bezier.get(t);
-    const step2 = bezier.derivative(t);
-    return {
-      x: step.x,
-      y: step.y,
-      rotate: getAngle(0, 0, step2.x, step2.y) || 0
+  getFrame(bezier: IBezierItem['bezier'], t: number): IStyle {
+    const frameData: IStyle = {};
+    for(let property in bezier) {
+      frameData[property] = bezier[property].get(t).y;
     }
+    return frameData;
   }
 
   play() {
