@@ -2,11 +2,17 @@ export enum StylePropertys {
   x = 'x',
   y = 'y',
   rotate = 'rotate',
-  per = 'per',
+  opacity = 'opacity',
+  width = 'width',
+  height = 'height',
 }
 
-export type IStyle = {
+export type IBaseStyle = {
   [key in StylePropertys]?: number
+}
+
+export type IBezierStyle = { per: number} & {
+  [key in StylePropertys]?: number;
 }
 
 export type IAnimateOptions = {
@@ -17,6 +23,6 @@ export type IAnimateOptions = {
 }
 
 export type IAnimateOptionsItem = {
-  points: IStyle[],
+  points: IBaseStyle[],
   duration: number
 }

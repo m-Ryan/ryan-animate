@@ -1,8 +1,7 @@
 import { tweenFunctions } from './tween-functions';
-
-import requestAnimationFrame from 'raf';
 import { getAngle } from './utils';
-import { IStyle, IAnimateOptions } from 'animate/Tween/type';
+import { IBaseStyle, IAnimateOptions } from 'util/Tween/type';
+import { animateQueue } from './animate-queue';
 
 export interface ITweenOptions extends IAnimateOptions {
   type?: TweenType;
@@ -11,16 +10,16 @@ export interface ITweenOptions extends IAnimateOptions {
 type TweenType = keyof typeof tweenFunctions;
 
 type ITweenItem = {
-  start: IStyle,
-  end: IStyle,
+  start: IBaseStyle,
+  end: IBaseStyle,
   duration: number;
 }
 
 export type ITweenEventType = 'onChange' | 'onEnd';
 
 interface IStatusChangeHandler {
-  'onChange'?: (style: IStyle) => any;
-  'onEnd'?: (style: IStyle) => any;
+  'onChange'?: (style: IBaseStyle) => any;
+  'onEnd'?: (style: IBaseStyle) => any;
 }
 
 export class Tween {
@@ -36,7 +35,7 @@ export class Tween {
   private currentTween: ITweenItem | null;
   private handler: IStatusChangeHandler = {};
   private tweenGroup: ITweenItem[] = [];
-  private frameDataList: IStyle[] = []
+  private frameDataList: IBaseStyle[] = []
 
   constructor(options: ITweenOptions) {
     this.reverseable = !!options.reverseable;
@@ -82,11 +81,11 @@ export class Tween {
     return null;
   }
 
-  getFrame(t: number, currentTween: ITweenItem, type: TweenType, ): IStyle {
+  getFrame(t: number, currentTween: ITweenItem, type: TweenType, ): IBaseStyle {
     const start = currentTween.start;
     const end = currentTween.end;
     const duration = currentTween.duration;
-    let frameData: IStyle = {}
+    let frameData: IBaseStyle = {}
 
     for(let property in start) {
       if (start[property] !== undefined && end[property] !== undefined) {
@@ -116,7 +115,7 @@ export class Tween {
       this.frameDataList.push(data);
       const onChangeHandle = this.handler['onChange'];
       onChangeHandle && onChangeHandle(data);
-      this.intervalTimer = requestAnimationFrame(handler);
+      
       if (temp > 1) {
         this.currentTween = this.getNextTweenItem();
         if (!this.currentTween) {
@@ -136,7 +135,7 @@ export class Tween {
         }
       }
     }
-    handler()
+    this.intervalTimer = animateQueue.add(handler);
   }
 
   reserve() {
@@ -144,7 +143,6 @@ export class Tween {
     const frameData = this.frameDataList.pop();
     const onChangeHandle = this.handler['onChange'];
     onChangeHandle && onChangeHandle(frameData!);
-    this.intervalTimer = requestAnimationFrame(handler);
      if (!this.frameDataList.length) {
       this.destroy();
 
@@ -157,7 +155,7 @@ export class Tween {
       onEndHandle && onEndHandle(frameData!);
      }
     }
-    handler()
+    this.intervalTimer = animateQueue.add(handler);
   }
   
   replay() {
@@ -179,7 +177,7 @@ export class Tween {
   }
 
   destroy() {
-    requestAnimationFrame.cancel(this.intervalTimer);
+    animateQueue.remove(this.intervalTimer);
   }
 
   public on<T extends ITweenEventType>(event: T, fn: IStatusChangeHandler[ITweenEventType]) {

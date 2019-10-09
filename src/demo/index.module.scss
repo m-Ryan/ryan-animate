@@ -1,0 +1,15 @@
+.container {
+  padding: 40px;
+  .list {
+    display: flex;
+    flex-wrap: wrap;
+    .listItem {
+      border: 1px solid #ccc;
+      width: 200px;
+      height: 200px;
+      font-size: 0;
+      margin: 10px;
+     
+    }
+  }
+}

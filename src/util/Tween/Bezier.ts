@@ -1,9 +1,7 @@
 import BezierJs from 'bezier-js';
-import requestAnimationFrame from 'raf';
-import { StylePropertys, IStyle, IAnimateOptions } from './type';
+import { StylePropertys, IBaseStyle, IAnimateOptions } from './type';
+import { animateQueue } from './animate-queue';
 // import { getAngle } from './utils';
-
-export interface IBezierOptions extends IAnimateOptions {}
 
 type IBezierItem = {
   bezier: {
@@ -16,8 +14,8 @@ type IBezierItem = {
 export type IBezierEventType = 'onChange' | 'onEnd';
 
 interface IStatusChangeHandler {
-  'onChange'?: (style: IStyle) => any;
-  'onEnd'?: (style: IStyle) => any;
+  'onChange'?: (style: IBaseStyle) => any;
+  'onEnd'?: (style: IBaseStyle) => any;
 }
 
 export class Bezier {
@@ -32,9 +30,9 @@ export class Bezier {
   private currentBezier: IBezierItem | null;
   private handler: IStatusChangeHandler = {};
   private bezierGroup: IBezierItem[];
-  private frameDataList: IStyle[] = []
+  private frameDataList: IBaseStyle[] = []
 
-  constructor(options: IBezierOptions) {
+  constructor(options: IAnimateOptions) {
     this.reverseable = !!options.reverseable;
     this.infinite = !!options.infinite;
     this.autoRotate = !!options.autoRotate;
@@ -46,8 +44,8 @@ export class Bezier {
       let bezier: IBezierItem['bezier'] = {}
       for(let property in bezierItem.points[0]) {
         bezier[property] = new BezierJs(bezierItem.points.map(item=> ({
-          x: item.per as number,
-          y: item[property] as number
+          x: 0,
+          y: item[property]
         })))
       }
 
@@ -86,8 +84,8 @@ export class Bezier {
     return null;
   }
 
-  getFrame(bezier: IBezierItem['bezier'], t: number): IStyle {
-    const frameData: IStyle = {};
+  getFrame(bezier: IBezierItem['bezier'], t: number): IBaseStyle {
+    const frameData: IBaseStyle = {};
     for(let property in bezier) {
       frameData[property] = bezier[property].get(t).y;
     }
@@ -111,7 +109,6 @@ export class Bezier {
       this.frameDataList.push(data);
       const onChangeHandle = this.handler['onChange'];
       onChangeHandle && onChangeHandle(data);
-      this.intervalTimer = requestAnimationFrame(handler);
       if (temp > 1) {
         this.currentBezier = this.getNextBezierItem();
         if (!this.currentBezier) {
@@ -131,7 +128,7 @@ export class Bezier {
         }
       }
     }
-    handler()
+    this.intervalTimer = animateQueue.add(handler);
   }
 
   reserve() {
@@ -139,7 +136,6 @@ export class Bezier {
     const frameData = this.frameDataList.pop();
     const onChangeHandle = this.handler['onChange'];
     onChangeHandle && onChangeHandle(frameData!);
-    this.intervalTimer = requestAnimationFrame(handler);
      if (!this.frameDataList.length) {
       this.destroy();
 
@@ -152,7 +148,7 @@ export class Bezier {
       onEndHandle && onEndHandle(frameData!);
      }
     }
-    handler()
+    this.intervalTimer = animateQueue.add(handler);
   }
   
   replay() {
@@ -174,7 +170,7 @@ export class Bezier {
   }
 
   destroy() {
-    requestAnimationFrame.cancel(this.intervalTimer);
+    animateQueue.remove(this.intervalTimer);
   }
 
   public on<T extends IBezierEventType>(event: T, fn: IStatusChangeHandler[IBezierEventType]) {
