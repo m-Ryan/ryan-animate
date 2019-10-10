@@ -3,6 +3,7 @@ import styles from './index.module.scss';
 import { AnimateItem } from './bezier';
 import { Bezier } from '../util/Tween/Bezier';
 import { Tween } from 'util/Tween/Tween';
+import { SvgPath } from 'util/Tween/SvgPath';
 
 export class Demo extends React.Component {
 
@@ -360,8 +361,105 @@ export class Demo extends React.Component {
             />
           </div>
 
+        </div>
+        <h2>SvgPath demo</h2>
+        <div className={styles.list}>
+
+          <div className={styles.listItem}>
+            {/* 1 */}
+            <AnimateItem plugin={
+              SvgPath({
+                // reverseable: true,
+                infinite: true,
+                autoRotate: true,
+                path: 'M 0 100 Q 0 0 100 0 Q 200 0 200 100 Q 200 200 100 200 Q 0 200 0 100 ',
+                duration: 5
+              })
+            }
+              onChange={
+                (style) => {
+                  return {
+                    transform: `translate(${style.x}px, ${style.y}px) rotate(${style.rotate}deg)`,
+                    display: 'inline-block',
+                    transformOrigin: 'center',
+                  }
+                }
+              }
+            />
+          </div>
+
+          <div className={styles.listItem}>
+            {/* 1 */}
+            <AnimateItem plugin={
+              SvgPath({
+                // reverseable: true,
+                infinite: true,
+                autoRotate: true,
+                path: 'M 0 0 Q 154 33 198 198 ',
+                duration: 3
+              })
+            }
+              onChange={
+                (style) => {
+                  return {
+                    transform: `translate(${style.x}px, ${style.y}px) rotate(${style.rotate}deg)`,
+                    display: 'inline-block',
+                    transformOrigin: 'center',
+                  }
+                }
+              }
+            />
+          </div>
+
+          <div className={styles.listItem}>
+            {/* 1 */}
+            <AnimateItem plugin={
+              SvgPath({
+                // reverseable: true,
+                infinite: true,
+                autoRotate: true,
+                path: 'M 0 55 Q 66 110 88 198 Q 110 110 154 198 Q 176 154 198 198 ',
+                duration: 3
+              })
+            }
+              onChange={
+                (style) => {
+                  return {
+                    transform: `translate(${style.x}px, ${style.y}px) rotate(${style.rotate}deg)`,
+                    display: 'inline-block',
+                    transformOrigin: 'center',
+                  }
+                }
+              }
+            />
+          </div>
+
+          <div className={styles.listItem}>
+            {/* 1 */}
+            <AnimateItem plugin={
+              SvgPath({
+                // reverseable: true,
+                infinite: true,
+                autoRotate: true,
+                path: 'M 100 100 Q 44 99 44 154 Q 99 198 165 176 Q 198 132 176 77 Q 110 0 22 66 ',
+                duration: 3
+              })
+            }
+              onChange={
+                (style) => {
+                  return {
+                    transform: `translate(${style.x}px, ${style.y}px) rotate(${style.rotate}deg)`,
+                    display: 'inline-block',
+                    transformOrigin: 'center',
+                  }
+                }
+              }
+            />
+          </div>
+
 
         </div>
+
       </div>
     );
   }
