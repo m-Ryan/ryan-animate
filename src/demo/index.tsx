@@ -1,9 +1,9 @@
 import React from 'react';
 import styles from './index.module.scss';
 import { AnimateItem } from './bezier';
-import { Bezier } from '../util/Tween/Bezier';
-import { Tween } from 'util/Tween/Tween';
-import { SvgPath } from 'util/Tween/SvgPath';
+import { Bezier } from '../util/animate/Bezier';
+import { Tween } from 'util/animate/Tween';
+import { SvgPath } from 'util/animate/SvgPath';
 
 export class Demo extends React.Component {
 
@@ -245,31 +245,20 @@ export class Demo extends React.Component {
           <div className={styles.listItem}>
             <AnimateItem plugin={
               new Tween({
-                type: 'easeInOutCirc',
+                type: 'linear',
                 infinite: true,
                 group: [
                   {
                     points: [
                       {
-                        x: 0,
-                        y: 0
+                        opacity: 1
                       },
                       {
-                        x: 100,
-                        y: 0
+                        opacity: 0.5
                       },
                       {
-                        x: 100,
-                        y: 100
+                        opacity: 1
                       },
-                      {
-                        x: 0,
-                        y: 100
-                      },
-                      {
-                        x: 0,
-                        y: 0
-                      }
                     ],
                     duration: 3
                   }
@@ -278,9 +267,10 @@ export class Demo extends React.Component {
             }
               onChange={
                 (style) => ({
-                  transform: `translate(${style.x}px, ${style.y}px)`,
                   display: 'inline-block',
-                  transformOrigin: 'center',
+                  opacity: style.opacity,
+                  width: '100%',
+                  height: '100%'
                 })
               }
             />
@@ -290,39 +280,39 @@ export class Demo extends React.Component {
           <div className={styles.listItem}>
             <AnimateItem plugin={
               new Tween({
-                type: 'easeInOutBounce',
+                type: 'easeInBounce',
                 infinite: true,
-                reverseable: true,
                 group: [
                   {
                     points: [
                       {
-                        x: 0,
-                        y: 0
+                        scale: 1
                       },
                       {
-                        x: 34,
-                        y: 8
+                        scale: 0.7
                       },
                       {
-                        x: 158,
-                        y: 22
+                        scale: 0.5
                       },
                       {
-                        x: 200,
-                        y: 200
+                        scale: 0.3
+                      },
+                      {
+                        scale: 0.1
                       }
                     ],
-                    duration: 3
+                    duration: 5
                   }
                 ]
               })
             }
               onChange={
                 (style) => ({
-                  transform: `translate(${style.x}px, ${style.y}px)`,
+                  transform: `scale(${style.scale})`,
                   display: 'inline-block',
                   transformOrigin: 'center',
+                  width: '100%',
+                  height: '100%'
                 })
               }
             />
@@ -332,7 +322,7 @@ export class Demo extends React.Component {
           <div className={styles.listItem}>
             <AnimateItem plugin={
               new Tween({
-                type: 'easeInSine',
+                type: 'easeInOutCubic',
                 infinite: true,
                 group: [
                   {
@@ -342,11 +332,24 @@ export class Demo extends React.Component {
                         y: 0
                       },
                       {
-                        x: 200,
-                        y: 200
+                        x: 100,
+                        y: 100
                       }
                     ],
-                    duration: 3
+                    duration: 1.5
+                  },
+                  {
+                    points: [
+                      {
+                        x: 100,
+                        y: 100
+                      },
+                      {
+                        x: 200,
+                        y: 100
+                      }
+                    ],
+                    duration: 1.5
                   }
                 ]
               })

@@ -1,8 +1,8 @@
 import React, { CSSProperties } from 'react';
 import styles from './index.module.scss';
-import { Bezier } from '../../util/Tween/Bezier';
-import { IBaseStyle } from '../../util/Tween/type';
-import { Tween } from '../../util/Tween/Tween';
+import { Bezier } from '../../util/animate/Bezier';
+import { IBaseStyle } from '../../util/animate/type';
+import { Tween } from '../../util/animate/Tween';
 
 
 interface IProps {

@@ -5,6 +5,7 @@ export enum StylePropertys {
   opacity = 'opacity',
   width = 'width',
   height = 'height',
+  scale = 'scale'
 }
 
 export type IBaseStyle = {

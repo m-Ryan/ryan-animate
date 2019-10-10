@@ -10,13 +10,15 @@ type IBezierItem = {
   duration: number
 }
 
+type CallBackFn = (style: IBaseStyle) => any
 
-export type IBezierEventType = 'onChange' | 'onEnd';
 
 interface IStatusChangeHandler {
-  'onChange'?: (style: IBaseStyle) => any;
-  'onEnd'?: (style: IBaseStyle) => any;
+  'onChange': CallBackFn[];
+  'onEnd':  CallBackFn[];
 }
+
+export type IBezierEventType = 'onChange' | 'onEnd';
 
 export class Bezier {
   private currentTime = 0;
@@ -28,7 +30,10 @@ export class Bezier {
   private bezierId: number = 0;
   private intervalTimer: number = 0;
   private currentBezier: IBezierItem | null;
-  private handler: IStatusChangeHandler = {};
+  private handler: IStatusChangeHandler = {
+    onChange: [],
+    onEnd: []
+  };
   private bezierGroup: IBezierItem[];
   private frameDataList: IBaseStyle[] = []
 
@@ -107,8 +112,8 @@ export class Bezier {
       this.currentTime += this.perFrame;
       const data = this.getFrame(this.currentBezier.bezier, t);
       this.frameDataList.push(data);
-      const onChangeHandle = this.handler['onChange'];
-      onChangeHandle && onChangeHandle(data);
+      // callback data
+      this.handler['onChange'].forEach(fn=>fn(data));
       if (temp > 1) {
         this.currentBezier = this.getNextBezierItem();
         if (!this.currentBezier) {
@@ -121,8 +126,8 @@ export class Bezier {
               this.replay();
               return;
             }
-            const onEndHandle = this.handler['onEnd'];
-            onEndHandle && onEndHandle(data);
+
+            this.handler['onEnd'].forEach(fn=>fn(data));
           }
           
         }
@@ -134,8 +139,9 @@ export class Bezier {
   reserve() {
     const handler = () => {
     const frameData = this.frameDataList.pop();
-    const onChangeHandle = this.handler['onChange'];
-    onChangeHandle && onChangeHandle(frameData!);
+    if (frameData) {
+      this.handler['onChange'].forEach(fn=>fn(frameData));
+    }
      if (!this.frameDataList.length) {
       this.destroy();
 
@@ -144,8 +150,9 @@ export class Bezier {
         return;
       }
 
-      const onEndHandle = this.handler['onEnd'];
-      onEndHandle && onEndHandle(frameData!);
+      if (frameData) {
+        this.handler['onEnd'].forEach(fn=>fn(frameData));
+      }
      }
     }
     this.intervalTimer = animateQueue.add(handler);
@@ -173,12 +180,12 @@ export class Bezier {
     animateQueue.remove(this.intervalTimer);
   }
 
-  public on<T extends IBezierEventType>(event: T, fn: IStatusChangeHandler[IBezierEventType]) {
-    this.handler[event] = fn;
+  public on<T extends IBezierEventType>(event: T, fn: CallBackFn) {
+    this.handler[event].push(fn);
   }
 
-  public off<T extends IBezierEventType>(event: T) {
-    delete this.handler[event];
+  public off<T extends IBezierEventType>(event: T, fn: CallBackFn) {
+    this.handler[event] = this.handler[event].filter((item=> item !== fn))
   }
 
 }
